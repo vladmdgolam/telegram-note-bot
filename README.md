@@ -42,23 +42,23 @@ A local Telegram bot that captures forwarded messages and saves them to a markdo
 ### 4. Install Dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 5. Start the Bot
 
 ```bash
-npm start
+pnpm start
 ```
 
 Or for development with auto-reload:
 ```bash
-npm run dev
+pnpm dev
 ```
 
 ## Usage
 
-1. Start the bot with `npm start`
+1. Start the bot with `pnpm start`
 2. Open Telegram and find your bot (by the username you created)
 3. Send a message or forward any message to your bot
 4. The bot will save it to `notes.md` in the project directory

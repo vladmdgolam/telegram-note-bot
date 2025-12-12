@@ -4,6 +4,7 @@
   "description": "Local Telegram bot that saves forwarded messages to markdown",
   "type": "module",
   "main": "index.js",
+  "packageManager": "pnpm@9.0.0",
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js"
