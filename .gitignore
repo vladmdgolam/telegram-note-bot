@@ -10,8 +10,8 @@ pnpm-lock.yaml
 # Attachments (user data)
 attachments/
 
-# Notes file (user data)
-notes.md
+# Notes folder (user data)
+notes/
 
 # Build output
 dist/
@@ -24,3 +24,4 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+notes.md

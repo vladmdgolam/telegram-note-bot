@@ -21,8 +21,13 @@ if (!BOT_TOKEN || !ALLOWED_USER_ID) {
   process.exit(1);
 }
 
-const NOTES_FILE = path.join(PROJECT_ROOT, 'notes.md');
+const NOTES_DIR = path.join(PROJECT_ROOT, 'notes');
 const ATTACHMENTS_DIR = path.join(PROJECT_ROOT, 'attachments');
+
+if (!fs.existsSync(NOTES_DIR)) {
+  fs.mkdirSync(NOTES_DIR, { recursive: true });
+  console.log('📁 Created notes directory');
+}
 
 if (!fs.existsSync(ATTACHMENTS_DIR)) {
   fs.mkdirSync(ATTACHMENTS_DIR, { recursive: true });
@@ -56,16 +61,33 @@ type IncomingMessage = ForwardMeta & MediaMeta;
 
 const bot = new Telegraf(BOT_TOKEN);
 
-const getTimestamp = (): string => {
+const MONTH_NAMES = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+const getTimestamp = (unixTimestamp?: number): string => {
+  const date = unixTimestamp ? new Date(unixTimestamp * 1000) : new Date();
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
+};
+
+const getDayNotesFile = (): string => {
   const now = new Date();
-  return now.toISOString().replace('T', ' ').substring(0, 19);
+  const day = now.getDate();
+  const month = MONTH_NAMES[now.getMonth()];
+  const baseName = `${day}-${month}`;
+
+  // Check if base file exists, if so append to it
+  const baseFile = path.join(NOTES_DIR, `${baseName}.md`);
+  return baseFile;
 };
 
 const appendToNotes = (content: string): void => {
+  const notesFile = getDayNotesFile();
   try {
-    fs.appendFileSync(NOTES_FILE, `${content}\n`, 'utf8');
+    fs.appendFileSync(notesFile, `${content}\n`, 'utf8');
   } catch (error) {
-    console.error('❌ Error writing to notes.md:', (error as Error).message);
+    console.error('❌ Error writing to notes:', (error as Error).message);
   }
 };
 
@@ -143,10 +165,11 @@ bot.on('message', async (ctx) => {
   console.log('\n📨 Processing message...');
 
   const message = ctx.message as IncomingMessage;
-  const timestamp = getTimestamp();
+  const messageDate = 'date' in ctx.message ? (ctx.message as { date: number }).date : undefined;
+  const timestamp = getTimestamp(messageDate);
 
   let markdownContent = '\n---\n';
-  markdownContent += `## ${timestamp}`;
+  markdownContent += `**${timestamp}**`;
   markdownContent += formatForwardInfo(message);
   markdownContent += '\n\n';
 
@@ -209,14 +232,15 @@ bot.on('message', async (ctx) => {
     markdownContent += '\n**Attachments:**\n';
     for (const att of attachments) {
       const displayName = att.originalName || att.name;
-      markdownContent += `- [${displayName}](./attachments/${att.name}) _(${att.type})_\n`;
+      markdownContent += `- [${displayName}](../attachments/${att.name}) _(${att.type})_\n`;
     }
   }
 
   markdownContent += '\n---\n';
   appendToNotes(markdownContent);
 
-  console.log('✅ Saved to notes.md');
+  const notesFile = getDayNotesFile();
+  console.log(`✅ Saved to ${path.basename(notesFile)}`);
   await ctx.reply('✅ Saved to notes!');
 });
 
@@ -228,8 +252,8 @@ bot
   .launch()
   .then(() => {
     console.log('\n🤖 Telegram Note Bot is running!');
-    console.log(`📝 Notes will be saved to: ${NOTES_FILE}`);
-    console.log(`📁 Attachments will be saved to: ${ATTACHMENTS_DIR}`);
+    console.log(`📝 Notes will be saved to: ${NOTES_DIR}/`);
+    console.log(`📁 Attachments will be saved to: ${ATTACHMENTS_DIR}/`);
     console.log(`👤 Only accepting messages from user ID: ${ALLOWED_USER_ID}`);
     console.log('\n💡 Press Ctrl+C to stop\n');
   })
