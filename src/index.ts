@@ -4,7 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { config } from 'dotenv';
-import { Telegraf } from 'telegraf';
+import { Context, Telegraf } from 'telegraf';
+import type { Update } from 'telegraf/types';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -60,6 +61,23 @@ type MediaMeta = {
 type IncomingMessage = ForwardMeta & MediaMeta;
 
 const bot = new Telegraf(BOT_TOKEN);
+
+// Message queue for sequential processing
+type MessageContext = Context<Update.MessageUpdate>;
+const messageQueue: MessageContext[] = [];
+let isProcessing = false;
+
+const processQueue = async () => {
+  if (isProcessing || messageQueue.length === 0) return;
+  isProcessing = true;
+
+  while (messageQueue.length > 0) {
+    const ctx = messageQueue.shift()!;
+    await processMessage(ctx);
+  }
+
+  isProcessing = false;
+};
 
 const MONTH_NAMES = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
@@ -145,23 +163,7 @@ const formatForwardInfo = (message: ForwardMeta): string => {
   return '';
 };
 
-bot.on('message', async (ctx) => {
-  const userId = ctx.from?.id?.toString();
-  if (!userId) {
-    console.log('🚫 Rejected message without sender information');
-    return;
-  }
-
-  if (userId !== ALLOWED_USER_ID) {
-    console.log(`🚫 Rejected message from unauthorized user: ${userId}`);
-    return;
-  }
-
-  if (!ctx.message) {
-    console.log('ℹ️ No message payload to process');
-    return;
-  }
-
+const processMessage = async (ctx: MessageContext) => {
   console.log('\n📨 Processing message...');
 
   const message = ctx.message as IncomingMessage;
@@ -247,6 +249,28 @@ bot.on('message', async (ctx) => {
   const notesFile = getDayNotesFile();
   console.log(`✅ Saved to ${path.basename(notesFile)}`);
   await ctx.reply('✅ Saved to notes!');
+};
+
+bot.on('message', (ctx) => {
+  const userId = ctx.from?.id?.toString();
+  if (!userId) {
+    console.log('🚫 Rejected message without sender information');
+    return;
+  }
+
+  if (userId !== ALLOWED_USER_ID) {
+    console.log(`🚫 Rejected message from unauthorized user: ${userId}`);
+    return;
+  }
+
+  if (!ctx.message) {
+    console.log('ℹ️ No message payload to process');
+    return;
+  }
+
+  // Queue the message and process in order
+  messageQueue.push(ctx);
+  processQueue();
 });
 
 bot.catch((err, ctx) => {
