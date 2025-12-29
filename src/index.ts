@@ -71,8 +71,9 @@ const appendToNotes = (content: string): void => {
 
 const generateFileName = (baseName: string, extension: string): string => {
   const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
   const sanitized = baseName ? baseName.replace(/[^a-z0-9]/gi, '_') : 'file';
-  return `${timestamp}_${sanitized}${extension}`;
+  return `${timestamp}_${random}_${sanitized}${extension}`;
 };
 
 const downloadFile = async (fileId: string, fileName: string): Promise<string | null> => {
