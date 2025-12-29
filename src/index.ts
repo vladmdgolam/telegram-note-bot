@@ -232,7 +232,12 @@ bot.on('message', async (ctx) => {
     markdownContent += '\n**Attachments:**\n';
     for (const att of attachments) {
       const displayName = att.originalName || att.name;
-      markdownContent += `- [${displayName}](../attachments/${att.name}) _(${att.type})_\n`;
+      const isImage = ['Photo', 'Video', 'Video Note'].includes(att.type);
+      if (isImage) {
+        markdownContent += `![${displayName}](../attachments/${att.name})\n`;
+      } else {
+        markdownContent += `- [${displayName}](../attachments/${att.name}) _(${att.type})_\n`;
+      }
     }
   }
 
